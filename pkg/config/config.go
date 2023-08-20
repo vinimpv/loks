@@ -1,6 +1,10 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/spf13/viper"
 )
 
@@ -13,11 +17,12 @@ type Deployment struct {
 }
 
 type Component struct {
-	Name        string            `mapstructure:"name"`
-	Image       string            `mapstructure:"image"`
-	Env         map[string]string `mapstructure:"env,omitempty"`
-	Deployments []Deployment      `mapstructure:"deployments"`
-	BuildDev    string            `mapstructure:"build_dev,omitempty"`
+	Name          string            `mapstructure:"name"`
+	Image         string            `mapstructure:"image,omitempty"`
+	SkipPullImage bool              `mapstructure:"skip_pull_image,omitempty"`
+	Env           map[string]string `mapstructure:"env,omitempty"`
+	Deployments   []Deployment      `mapstructure:"deployments"`
+	BuildDev      string            `mapstructure:"build_dev,omitempty"`
 }
 
 type Ingress struct {
@@ -34,7 +39,42 @@ type Config struct {
 	Ingress    []Ingress   `mapstructure:"ingress"`
 }
 
-func LoadConfig(path string) (*Config, error) {
+func GetCurrentContextRootPath() (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("error getting current directory: %v", err)
+	}
+	configPathInCurrentDir := filepath.Join(currentDir, "loks.yaml")
+	configPathInParentDir := filepath.Join(currentDir, "..", "loks.yaml")
+
+	var configPath string
+	if _, err := os.Stat(configPathInCurrentDir); err == nil {
+		configPath = configPathInCurrentDir
+	} else if _, err := os.Stat(configPathInParentDir); err == nil {
+		configPath = configPathInParentDir
+	} else {
+		return "", fmt.Errorf("no config file found")
+	}
+	return filepath.Dir(configPath), nil
+}
+
+// LoadConfig loads the config from the current directory or the parent directory
+// if the config file is not found in the current directory.
+// It returns an error if the config file is not found in either directory.
+// It returns the config if the config file is found.
+// It returns an error if the config file is found but it cannot be parsed.
+// The user must be in the root projects directory or inside one of the projects root folders.
+func LoadUserConfig() (*Config, error) {
+	configPath, err := GetCurrentContextRootPath()
+	if err != nil {
+		return nil, fmt.Errorf("error getting current context root path: %v", err)
+	}
+	return LoadConfigFromPath(filepath.Join(configPath, "loks.yaml"))
+
+}
+
+// LoadConfig loads the config from the given path.
+func LoadConfigFromPath(path string) (*Config, error) {
 	v := viper.New()
 
 	v.SetConfigFile(path)

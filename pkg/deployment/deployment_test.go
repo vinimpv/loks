@@ -10,7 +10,7 @@ import (
 )
 
 func TestDeployToCluster(t *testing.T) {
-	config, err := config.LoadConfig("../../example/loks.yaml")
+	config, err := config.LoadConfigFromPath("../../example/loks.yaml")
 	assert.NoError(t, err)
 	renderedYaml, err := renderer.Render("../../example/loks.yaml")
 	assert.NoError(t, err)

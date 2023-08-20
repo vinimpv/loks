@@ -7,6 +7,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.3
+	go.etcd.io/bbolt v1.3.7
 )
 
 require (

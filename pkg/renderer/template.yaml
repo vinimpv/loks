@@ -8,14 +8,27 @@ kind: Job
 metadata:
   name: #@ "{}-pre-deploy-job".format(comp.name)
   annotations:
-    kapp.k14s.io/change-group: #@ "{}-pre-deploy".format(comp.name)
-    kapp.k14s.io/change-rule: #@ "upsert before upserting {}".format(comp.name)
+    kapp.k14s.io/change-group: #@ "{}.pre-deploy".format(comp.name)
+    #@ if comp.dependencies:
+    #@ for i, d in enumerate(comp.dependencies):
+    #@ for stage in ["post-deploy", "deployments"]:
+    #@ key = 'kapp.k14s.io/change-rule.{}-{}'.format(d, stage)
+    #@yaml/text-templated-strings
+    (@= key @): #@ "upsert after upserting {}.{}".format(d, stage)
+    #@ end
+    #@ end
+    #@ end
 spec:
   template:
     spec:
       containers:
       - name: pre-deploy-script
+        #@ if comp.skip_pull_image:
+        imagePullPolicy: Never
+        image: #@ "docker.io/library/{}:dev".format(comp.name)
+        #@ else:
         image: #@ comp.image
+        #@ end
         command: #@ ["/bin/sh", "-c", comp.pre_deploy_script]
         #@ if comp.env:
         env:
@@ -33,12 +46,17 @@ kind: Deployment
 metadata:
   name: #@ dep.name
   annotations:
-    kapp.k14s.io/change-group: #@ "{}/{}".format(comp.name, dep.name)
-    #@ if dep.dependencies:
-    #@ for i, d in enumerate(dep.dependencies):
-    #@ key = "kapp.k14s.io/change-rule.{}".format(i)
+    kapp.k14s.io/change-group: #@ "{}.deployments".format(comp.name)
+    #@ if comp.pre_deploy_script:
+    kapp.k14s.io/change-rule.pre-deploy: #@ "upsert after upserting {}.pre-deploy".format(comp.name, dep.name)
+    #@ end
+    #@ if comp.dependencies:
+    #@ for i, d in enumerate(comp.dependencies):
+    #@ for stage in ["post-deploy", "deployments"]:
+    #@ key = 'kapp.k14s.io/change-rule.{}-{}'.format(d, stage)
     #@yaml/text-templated-strings
-    (@= key @): #@ "upsert after upserting {}".format(d)
+    (@= key @): #@ "upsert after upserting {}.{}".format(d, stage)
+    #@ end
     #@ end
     #@ end
 spec:
@@ -53,7 +71,12 @@ spec:
     spec:
       containers:
       - name: #@ dep.name
+        #@ if comp.image and not comp.skip_pull_image:
         image: #@ comp.image
+        #@ else:
+        image: #@ "docker.io/library/{}:dev".format(comp.name)
+        imagePullPolicy: Never
+        #@ end
         #@ if dep.command:
         command: #@ dep.command
         #@ end
@@ -77,20 +100,29 @@ spec:
           value: #@ kvs[k]
         #@ end
         #@ end
+        #@ if dep.livenessProbe:
+        livenessProbe: #@ dep.livenessProbe
+        #@ end
 #@ if/end dep.port:
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: #@ dep.name
-  kapp.k14s.io/change-group: #@ "{}/{}".format(comp.name, dep.name)
-  #@ if dep.dependencies:
-  #@ for i, d in enumerate(dep.dependencies):
-  #@ key = "kapp.k14s.io/change-rule.{}".format(i)
-  #@yaml/text-templated-strings
-  (@= key @): #@ "upsert after upserting {}".format(d)
-  #@ end
-  #@ end
+  annotations:
+    kapp.k14s.io/change-group: #@ "{}.deployments".format(comp.name)
+    #@ if comp.pre_deploy_script:
+    kapp.k14s.io/change-rule.pre-deploy: #@ "upsert after upserting {}.pre-deploy".format(comp.name)
+    #@ end
+    #@ if comp.dependencies:
+    #@ for i, d in enumerate(comp.dependencies):
+    #@ for stage in ["post-deploy", "deployments"]:
+    #@ key = 'kapp.k14s.io/change-rule.{}-{}'.format(d, stage)
+    #@yaml/text-templated-strings
+    (@= key @): #@ "upsert after upserting {}.{}".format(d, stage)
+    #@ end
+    #@ end
+    #@ end
 spec:
   selector:
     app: #@ dep.name
@@ -117,14 +149,19 @@ kind: Job
 metadata:
   name: #@ "{}-post-deploy-job".format(comp.name)
   annotations:
-    kapp.k14s.io/change-group: #@ "{}-post-deploy".format(comp.name)
-    kapp.k14s.io/change-rule: #@ "upsert after upserting {}".format(comp.name)
+    kapp.k14s.io/change-group: #@ "{}.post-deploy".format(comp.name)
+    kapp.k14s.io/change-rule.after-deployments: #@ "upsert after upserting {}.deployments".format(comp.name)
 spec:
   template:
     spec:
       containers:
       - name: post-deploy-script
+        #@ if comp.skip_pull_image:
+        imagePullPolicy: Never
+        image: #@ "docker.io/library/{}:dev".format(comp.name)
+        #@ else:
         image: #@ comp.image
+        #@ end
         command: #@ ["/bin/sh", "-c", comp.post_deploy_script]
         #@ if comp.env:
         env:

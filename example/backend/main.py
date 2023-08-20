@@ -25,12 +25,12 @@ app = FastAPI()
 
 
 @app.on_event("startup")
-def on_startup():
+def on_startup() -> None:
     create_db_and_tables()
 
 
 @app.post("/todos/", response_model=Todo)
-def create_todo(todo: Todo):
+def create_todo(todo: Todo) -> Todo:
     with Session(engine) as session:
         session.add(todo)
         session.commit()
@@ -39,7 +39,12 @@ def create_todo(todo: Todo):
 
 
 @app.get("/todos/", response_model=List[Todo])
-def read_todos():
+def read_todos() -> List[Todo]:
     with Session(engine) as session:
         todos = session.exec(select(Todo)).all()
         return todos
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}

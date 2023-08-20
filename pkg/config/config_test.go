@@ -8,7 +8,7 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	configPath := "../../example/loks.yaml"
-	config, err := LoadConfig(configPath)
+	config, err := LoadConfigFromPath(configPath)
 	assert.NoError(t, err, "Failed to load config")
 
 	// Checking the number of components

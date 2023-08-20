@@ -14,11 +14,18 @@ components:
     #@schema/nullable
     image: string
 
+    #@schema/nullable
+    skip_pull_image: true
+
     #@schema/type any=True
     env: null
 
     #@schema/nullable
     build_dev: string
+
+    #@schema/nullable
+    dependencies:
+      - string
 
     deployments:
       #@schema/nullable
@@ -40,8 +47,25 @@ components:
         env: null
 
         #@schema/nullable
-        dependencies:
-          - string
+        livenessProbe:
+          #@schema/nullable
+          exec:
+            #@schema/nullable
+            command: [string]
+
+          #@schema/nullable
+          httpGet:
+            #@schema/nullable
+            path: string
+
+            #@schema/nullable
+            port: 123
+
+          #@schema/nullable
+          initialDelaySeconds: 123
+
+          #@schema/nullable
+          periodSeconds: 123
 
 ingress:
   #@schema/nullable

@@ -17,7 +17,7 @@ func DeployToCluster(clusterName, renderedYaml string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to deploy to cluster: %w, %s", err)
+		return fmt.Errorf("failed to deploy to cluster: %w", err)
 	}
 	return nil
 }
