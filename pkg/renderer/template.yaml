@@ -1,0 +1,160 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:struct", "struct")
+#@ for comp in data.values.components:
+#@ if/end comp.pre_deploy_script:
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: #@ "{}-pre-deploy-job".format(comp.name)
+  annotations:
+    kapp.k14s.io/change-group: #@ "{}-pre-deploy".format(comp.name)
+    kapp.k14s.io/change-rule: #@ "upsert before upserting {}".format(comp.name)
+spec:
+  template:
+    spec:
+      containers:
+      - name: pre-deploy-script
+        image: #@ comp.image
+        command: #@ ["/bin/sh", "-c", comp.pre_deploy_script]
+        #@ if comp.env:
+        env:
+          #@ kvs = struct.decode(comp.env)
+          #@ for k in kvs:
+          - name: #@ k
+            value: #@ kvs[k]
+          #@ end
+          #@ end
+      restartPolicy: OnFailure
+#@ for dep in comp.deployments:
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: #@ dep.name
+  annotations:
+    kapp.k14s.io/change-group: #@ "{}/{}".format(comp.name, dep.name)
+    #@ if dep.dependencies:
+    #@ for i, d in enumerate(dep.dependencies):
+    #@ key = "kapp.k14s.io/change-rule.{}".format(i)
+    #@yaml/text-templated-strings
+    (@= key @): #@ "upsert after upserting {}".format(d)
+    #@ end
+    #@ end
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: #@ dep.name
+  template:
+    metadata:
+      labels:
+        app: #@ dep.name
+    spec:
+      containers:
+      - name: #@ dep.name
+        image: #@ comp.image
+        #@ if dep.command:
+        command: #@ dep.command
+        #@ end
+        #@ if dep.port:
+        port:
+        - containerPort: #@ dep.port
+        #@ end
+        #@ if dep.env or comp.env:
+        env:
+        #@ if comp.env:
+        #@ kvs = struct.decode(comp.env)
+        #@ for k in kvs:
+        - name: #@ k
+          value: #@ kvs[k]
+        #@ end
+        #@ end
+        #@ if dep.env:
+        #@ kvs = struct.decode(dep.env)
+        #@ for k in kvs:
+        - name: #@ k
+          value: #@ kvs[k]
+        #@ end
+        #@ end
+#@ if/end dep.port:
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: #@ dep.name
+  kapp.k14s.io/change-group: #@ "{}/{}".format(comp.name, dep.name)
+  #@ if dep.dependencies:
+  #@ for i, d in enumerate(dep.dependencies):
+  #@ key = "kapp.k14s.io/change-rule.{}".format(i)
+  #@yaml/text-templated-strings
+  (@= key @): #@ "upsert after upserting {}".format(d)
+  #@ end
+  #@ end
+spec:
+  selector:
+    app: #@ dep.name
+  ports:
+  - protocol: TCP
+    #@ if dep.hostPort:
+    port: #@ dep.hostPort
+    targetPort: #@ dep.port
+    #@ else:
+    port: 80
+    targetPort: #@ dep.port
+    #@ end
+  #@ if dep.hostPort:
+  type: NodePort
+  #@ else:
+  type: ClusterIP
+  #@ end
+#@ end
+#@ end
+#@ if comp.post_deploy_script:
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: #@ "{}-post-deploy-job".format(comp.name)
+  annotations:
+    kapp.k14s.io/change-group: #@ "{}-post-deploy".format(comp.name)
+    kapp.k14s.io/change-rule: #@ "upsert after upserting {}".format(comp.name)
+spec:
+  template:
+    spec:
+      containers:
+      - name: post-deploy-script
+        image: #@ comp.image
+        command: #@ ["/bin/sh", "-c", comp.post_deploy_script]
+        #@ if comp.env:
+        env:
+          #@ kvs = struct.decode(comp.env)
+          #@ for k in kvs:
+          - name: #@ k
+            value: #@ kvs[k]
+          #@ end
+          #@ end
+      restartPolicy: OnFailure
+#@ end
+#@ end
+#@ for ing in data.values.ingress:
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: #@ "ingress-for-{}".format(ing.host)
+spec:
+  rules:
+  - host: #@ ing.host
+    http:
+      paths:
+      #@ for path in ing.paths:
+      - path: #@ path.path
+        pathType: Prefix
+        backend:
+          service:
+            name: #@ path.service
+            port:
+              number: 80
+      #@ end
+#@ end

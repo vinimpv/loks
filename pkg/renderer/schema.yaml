@@ -1,0 +1,54 @@
+#@data/values-schema
+---
+#@schema/nullable
+name: local
+components:
+  - name: string
+
+    #@schema/nullable
+    pre_deploy_script: string
+
+    #@schema/nullable
+    post_deploy_script: string
+
+    #@schema/nullable
+    image: string
+
+    #@schema/type any=True
+    env: null
+
+    #@schema/nullable
+    build_dev: string
+
+    deployments:
+      #@schema/nullable
+      - name: string
+
+        #@schema/nullable
+        image: string
+
+        #@schema/nullable
+        command: [string]
+
+        #@schema/nullable
+        port: 123
+
+        #@schema/nullable
+        hostPort: 123
+
+        #@schema/type any=True
+        env: null
+
+        #@schema/nullable
+        dependencies:
+          - string
+
+ingress:
+  #@schema/nullable
+  - host: string
+
+    paths:
+      #@schema/nullable
+      - path: string
+
+        service: string

@@ -1,0 +1,67 @@
+name: loks
+components:
+- name: redis
+  image: redis:latest
+  deployments:
+  - name: redis
+    port: 6379
+    hostPort: 6379
+
+- name: postgresql
+  image: postgres:latest
+  env:
+    POSTGRESQL_PASSWORD: postgres
+  deployments:
+  - name: postgres
+    port: 5432
+    hostPort: 5432
+
+- name: localstack
+  image: localstack/localstack:latest
+  post_deploy_script: |
+    awslocal s3 mb s3://my-bucket
+  deployments:
+  - name: localstack
+    port: 4566
+    hostPort: 4566
+    env:
+      SERVICES: s3
+
+- name: backend-app
+  image: backend:latest
+  build_dev: |
+    docker build -t backend:dev .
+  pre_deploy_script:
+    sleep 5
+    echo "Migration completed"
+  env:
+    REDIS_HOST: redis
+    POSTGRESQL_HOST: postgresql
+    S3_ENDPOINT: localstack:4566
+  deployments:
+  - name: backend
+    port: 5000
+    dependencies:
+      - redis/redis
+      - postgres/postgres
+      - localstack/localstack
+
+- name: frontend-app
+  image: frontend:latest
+  build_dev: |
+    docker build -t frontend:dev .
+  env:
+    BACKEND_ENDPOINT: backend-app:5000
+  deployments:
+  - name: frontend
+    port: 80
+    dependencies:
+      - backend-app/backend
+
+ingress:
+- host: "localhost"
+  paths:
+  - path: "/api"
+    service: backend
+  - path: "/"
+    service: frontend
