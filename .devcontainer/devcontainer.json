@@ -23,6 +23,9 @@
 			"minikube": "none",
 			"version": "latest"
 		},
+		"ghcr.io/devcontainers/features/go:1": {
+			"version": "latest"
+		},
 		"ghcr.io/mpriscella/features/kind:1": {}
 	},
 	"forwardPorts": [8080],
