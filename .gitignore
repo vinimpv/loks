@@ -3,3 +3,5 @@ build/
 todo.md
 *.pyc
 **/test.yaml
+
+dist/
