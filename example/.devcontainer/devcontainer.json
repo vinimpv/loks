@@ -1,0 +1,31 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.238.0/containers/typescript-node
+{
+	"name": "Existing Dockerfile",
+	"build": {
+		"context": "./",
+		"dockerfile": "./Dockerfile"
+	},
+	"remoteUser": "root",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode-remote.remote-containers"
+			]
+		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"version": "latest",
+			"moby": true
+		},
+		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+			"minikube": "none",
+			"version": "latest"
+		},
+		"ghcr.io/mpriscella/features/kind:1": {}
+	},
+	"forwardPorts": [8080],
+	"postCreateCommand": "/bootstrap.sh",
+	"runArgs": ["--network=host"]
+}

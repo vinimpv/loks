@@ -114,6 +114,7 @@ spec:
           value: #@ kvs[k]
         #@ end
         #@ end
+        #@ end
         #@ if dep.livenessProbe:
         livenessProbe: #@ dep.livenessProbe
         #@ end
@@ -169,9 +170,8 @@ spec:
   #@ end
 #@ end
 #@ end
-#@ end
-#@ if comp.post_deploy_script:
 ---
+#@ if comp.post_deploy_script:
 apiVersion: batch/v1
 kind: Job
 metadata:
