@@ -6,7 +6,7 @@ components:
       - name: redis
         ports:
           - port: 6379
-            hostPort: 6379
+            hostPort: 30379
 
   - name: postgres
     image: postgres:latest

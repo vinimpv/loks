@@ -14,9 +14,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var updateCmd = &cobra.Command{
-	Use:   "update-dev [component]",
-	Short: "Updates the specified component, or all components if none is specified. If the flag -b is provided, the component's dev image will be rebuilt",
+var updateCommand = &cobra.Command{
+	Use:   "update [component]",
+	Short: "Updates the specified component",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, currentContextRootPath, err := config.LoadUserConfig()
 		if err != nil {
@@ -28,7 +28,7 @@ var updateCmd = &cobra.Command{
 			log.Fatalf("error getting component: %v", err)
 		}
 		if component.BuildDev == "" {
-			log.Fatalf("no build_dev command specified for component %s", componentName)
+			log.Fatalf("no build_dev command specified for component %s, to pull new images run `loks pull`", componentName)
 		}
 		err = docker.BuildDev(filepath.Join(currentContextRootPath, component.Name), component.BuildDev)
 		if err != nil {
@@ -60,5 +60,5 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(updateCommand)
 }
