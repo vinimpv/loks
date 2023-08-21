@@ -8,7 +8,7 @@ import (
 
 func TestCreateDestroyCluster(t *testing.T) {
 	DestroyCluster("test")
-	err := CreateCluster("test")
+	err := CreateCluster("test", "../../example", []int{})
 
 	// Assert
 	assert.NoError(t, err)

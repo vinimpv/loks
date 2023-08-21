@@ -8,9 +8,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Port struct {
+	Port     int `mapstructure:"port"`
+	HostPort int `mapstructure:"hostPort"`
+}
 type Deployment struct {
 	Name         string            `mapstructure:"name"`
-	Port         int               `mapstructure:"port"`
+	Ports        []Port            `mapstructure:"ports"`
 	HostPort     int               `mapstructure:"hostPort"`
 	Env          map[string]string `mapstructure:"env,omitempty"`
 	Dependencies []string          `mapstructure:"dependencies,omitempty"`
@@ -19,24 +23,15 @@ type Deployment struct {
 type Component struct {
 	Name          string            `mapstructure:"name"`
 	Image         string            `mapstructure:"image,omitempty"`
-	SkipPullImage bool              `mapstructure:"skip_pull_image,omitempty"`
+	SkipPullImage bool              `mapstructure:"skip_image_pull,omitempty"`
 	Env           map[string]string `mapstructure:"env,omitempty"`
 	Deployments   []Deployment      `mapstructure:"deployments"`
 	BuildDev      string            `mapstructure:"build_dev,omitempty"`
 }
 
-type Ingress struct {
-	Host  string `mapstructure:"host"`
-	Paths []struct {
-		Path    string `mapstructure:"path"`
-		Service string `mapstructure:"service"`
-	} `mapstructure:"paths"`
-}
-
 type Config struct {
 	Name       string      `mapstructure:"name"`
 	Components []Component `mapstructure:"components"`
-	Ingress    []Ingress   `mapstructure:"ingress"`
 }
 
 func GetCurrentContextRootPath() (string, error) {

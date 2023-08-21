@@ -15,7 +15,7 @@ components:
     image: string
 
     #@schema/nullable
-    skip_pull_image: true
+    skip_image_pull: true
 
     #@schema/type any=True
     env: null
@@ -38,13 +38,18 @@ components:
         command: [string]
 
         #@schema/nullable
-        port: 123
+        ports:
+          #@schema/nullable
+          - port: 123
 
-        #@schema/nullable
-        hostPort: 123
+            #@schema/nullable
+            hostPort: 123
 
         #@schema/type any=True
         env: null
+
+        #@schema/nullable
+        mount_path: string
 
         #@schema/nullable
         livenessProbe:
@@ -66,13 +71,3 @@ components:
 
           #@schema/nullable
           periodSeconds: 123
-
-ingress:
-  #@schema/nullable
-  - host: string
-
-    paths:
-      #@schema/nullable
-      - path: string
-
-        service: string

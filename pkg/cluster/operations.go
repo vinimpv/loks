@@ -1,16 +1,21 @@
 package cluster
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"os"
 	"os/exec"
 )
 
-const KIND_CREATION_CMD = `cat <<EOF | kind create cluster --name %s --config=-
+const KIND_CREATION_CMD = `cat <<EOF | kind create cluster --name {{.Name}} --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
+  extraMounts:
+    - hostPath: {{.HostPathToMount}}
+      containerPath: /workspace
   kubeadmConfigPatches:
     - |
       kind: InitConfiguration
@@ -18,18 +23,46 @@ nodes:
         kubeletExtraArgs:
           node-labels: "ingress-ready=true"
   extraPortMappings:
-  - containerPort: 31820
-    hostPort: 31820
-    protocol: udp
+  {{- range $i, $p := .Ports }}
+  - containerPort: {{$p}}
+    hostPort: {{$p}}
+	protocol: TCP
+  {{- end }
 EOF
 `
 
-func CreateCluster(name string) error {
-	creationCmd := fmt.Sprintf(KIND_CREATION_CMD, name)
+type CommandTemplateData struct {
+	Name            string
+	HostPathToMount string
+	Ports           []int
+}
+
+func getCreateClusterCmd(name, hostPathToMount string, ports []int) (string, error) {
+	template, err := template.New("kind").Parse(KIND_CREATION_CMD)
+	if err != nil {
+		return "", fmt.Errorf("error parsing kind template: %w", err)
+	}
+	var buf bytes.Buffer
+	err = template.Execute(&buf, CommandTemplateData{
+		Name:            name,
+		HostPathToMount: hostPathToMount,
+		Ports:           ports,
+	})
+	if err != nil {
+		return "", fmt.Errorf("error executing kind template: %w", err)
+	}
+	return buf.String(), nil
+}
+
+func CreateCluster(name, hostPathToMount string, ports []int) error {
+	creationCmd, err := getCreateClusterCmd(name, hostPathToMount, ports)
+	if err != nil {
+		return fmt.Errorf("failed to create cluster: %w", err)
+	}
 	cmd := exec.Command("bash", "-c", creationCmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to create cluster")
 	}

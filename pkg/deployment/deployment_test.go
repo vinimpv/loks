@@ -14,7 +14,7 @@ func TestDeployToCluster(t *testing.T) {
 	assert.NoError(t, err)
 	renderedYaml, err := renderer.Render("../../example/loks.yaml")
 	assert.NoError(t, err)
-	err = cluster.CreateCluster(config.Name)
+	err = cluster.CreateCluster(config.Name, "../../example", []int{8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007})
 	assert.NoError(t, err)
 	defer cluster.DestroyCluster(config.Name)
 	err = DeployToCluster(config.Name, renderedYaml)

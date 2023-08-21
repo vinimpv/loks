@@ -22,7 +22,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "redis:latest", redis.Image)
 	assert.Len(t, redis.Deployments, 1)
 	assert.Equal(t, "redis", redis.Deployments[0].Name)
-	assert.Equal(t, 6379, redis.Deployments[0].Port)
+	assert.Equal(t, 6379, redis.Deployments[0].Ports[0].Port)
 	assert.Equal(t, 6379, redis.Deployments[0].HostPort)
 	assert.Nil(t, redis.Env)
 
@@ -33,7 +33,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "postgres", postgres.Env["POSTGRESQL_PASSWORD"])
 	assert.Len(t, postgres.Deployments, 1)
 	assert.Equal(t, "postgres", postgres.Deployments[0].Name)
-	assert.Equal(t, 5432, postgres.Deployments[0].Port)
+	assert.Equal(t, 5432, postgres.Deployments[0].Ports[0].Port)
 	assert.Equal(t, 5432, postgres.Deployments[0].HostPort)
 
 	// Localstack component
@@ -42,7 +42,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "localstack/localstack:latest", localstack.Image)
 	assert.Len(t, localstack.Deployments, 1)
 	assert.Equal(t, "localstack", localstack.Deployments[0].Name)
-	assert.Equal(t, 4566, localstack.Deployments[0].Port)
+	assert.Equal(t, 4566, localstack.Deployments[0].Ports[0].Port)
 	assert.Equal(t, 4566, localstack.Deployments[0].HostPort)
 	assert.Equal(t, "s3", localstack.Deployments[0].Env["SERVICES"])
 
@@ -55,7 +55,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "localstack:4566", backend.Env["S3_ENDPOINT"])
 	assert.Len(t, backend.Deployments, 1)
 	assert.Equal(t, "backend", backend.Deployments[0].Name)
-	assert.Equal(t, 5000, backend.Deployments[0].Port)
+	assert.Equal(t, 5000, backend.Deployments[0].Ports[0].Port)
 	assert.ElementsMatch(t, []string{"redis", "postgres", "localstack"}, backend.Deployments[0].Dependencies)
 
 	// Frontend-app component
@@ -65,15 +65,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "backend-app:5000", frontend.Env["BACKEND_ENDPOINT"])
 	assert.Len(t, frontend.Deployments, 1)
 	assert.Equal(t, "frontend", frontend.Deployments[0].Name)
-	assert.Equal(t, 80, frontend.Deployments[0].Port)
+	assert.Equal(t, 80, frontend.Deployments[0].Ports[0].Port)
 	assert.ElementsMatch(t, []string{"backend"}, frontend.Deployments[0].Dependencies)
 
-	// Ingress assertions
-	assert.Len(t, config.Ingress, 1)
-	assert.Equal(t, "localhost", config.Ingress[0].Host)
-	assert.Len(t, config.Ingress[0].Paths, 2)
-	assert.Equal(t, "/api", config.Ingress[0].Paths[0].Path)
-	assert.Equal(t, "backend", config.Ingress[0].Paths[0].Service)
-	assert.Equal(t, "/", config.Ingress[0].Paths[1].Path)
-	assert.Equal(t, "frontend", config.Ingress[0].Paths[1].Service)
 }

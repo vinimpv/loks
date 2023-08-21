@@ -4,8 +4,9 @@ components:
     image: redis:latest
     deployments:
       - name: redis
-        port: 6379
-        hostPort: 6379
+        ports:
+          - port: 6379
+            hostPort: 6379
 
   - name: postgres
     image: postgres:latest
@@ -15,35 +16,39 @@ components:
       POSTGRES_DB: postgres
     deployments:
       - name: postgres
-        port: 5432
-        hostPort: 5432
+        ports:
+          - port: 5432
+            hostPort: 5432
         livenessProbe:
           exec:
             command:
-            - pg_isready
-            - -U
-            - postgres
-            - -d
-            - postgres
+              - pg_isready
+              - -U
+              - postgres
+              - -d
+              - postgres
           initialDelaySeconds: 3
           periodSeconds: 3
 
   - name: localstack
     image: localstack/localstack:latest
     post_deploy_script: |
-      aws --endpoint-url=http://localstack.default.svc.cluster.local:4566 s3 mb s3://loks   
+      aws --endpoint-url=${AWS_ENDPOINT_URL} s3 mb s3://${AWS_S3_BUCKET_NAME}
     deployments:
       - name: localstack
-        port: 4566
-        hostPort: 4566
+        ports:
+          - port: 4566
+            hostPort: 4566
     env:
       SERVICES: s3
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      AWS_S3_BUCKET_NAME: loks
+      AWS_ENDPOINT_URL: http://localstack.default.svc.cluster.local:4566
 
   - name: backend
-    skip_pull_image: true
+    skip_image_pull: true
     build_dev: |
       docker build -t backend:dev .
     pre_deploy_script: |
@@ -53,7 +58,9 @@ components:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
     deployments:
       - name: backend
-        port: 8000
+        ports:
+          - port: 8000
+        mount_path: /app
         livenessProbe:
           httpGet:
             path: /health
@@ -66,21 +73,13 @@ components:
       - localstack
 
   - name: frontend
-    skip_pull_image: true
+    skip_image_pull: true
     build_dev: |
       docker build -t frontend:dev .
-    env:
-      BACKEND_ENDPOINT: backend-app:5000
     deployments:
       - name: frontend
-        port: 80
+        ports:
+          - port: 80
+        mount_path: /app
     dependencies:
       - backend
-
-ingress:
-  - host: "localhost"
-    paths:
-      - path: "/api"
-        service: backend
-      - path: "/"
-        service: frontend

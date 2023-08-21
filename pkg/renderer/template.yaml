@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: pre-deploy-script
-        #@ if comp.skip_pull_image:
+        #@ if comp.skip_image_pull:
         imagePullPolicy: Never
         image: #@ "docker.io/library/{}:dev".format(comp.name)
         #@ else:
@@ -71,7 +71,7 @@ spec:
     spec:
       containers:
       - name: #@ dep.name
-        #@ if comp.image and not comp.skip_pull_image:
+        #@ if comp.image and not comp.skip_image_pull:
         image: #@ comp.image
         #@ else:
         image: #@ "docker.io/library/{}:dev".format(comp.name)
@@ -81,8 +81,9 @@ spec:
         command: #@ dep.command
         #@ end
         #@ if dep.port:
-        port:
-        - containerPort: #@ dep.port
+        ports:
+        #@ for port in dep.ports:
+        - containerPort: #@ port.port
         #@ end
         #@ if dep.env or comp.env:
         env:
@@ -103,6 +104,17 @@ spec:
         #@ if dep.livenessProbe:
         livenessProbe: #@ dep.livenessProbe
         #@ end
+        #@ if dep.mount_path:
+        volumeMounts:
+        - name: #@ dep.name
+          mountPath: #@ dep.mount_path
+        #@ end
+      #@ if dep.mount_path:
+      volumes:
+      - name: #@ dep.name
+        hostPath:
+          path: #@ "/workspace/{}".format(dep.name)
+      #@ end
 #@ if/end dep.port:
 ---
 apiVersion: v1
@@ -127,18 +139,15 @@ spec:
   selector:
     app: #@ dep.name
   ports:
+  #@ for port in dep.ports:
   - protocol: TCP
-    #@ if dep.hostPort:
-    port: #@ dep.hostPort
-    targetPort: #@ dep.port
-    #@ else:
-    port: 80
-    targetPort: #@ dep.port
-    #@ end
-  #@ if dep.hostPort:
+    port: #@ port.hostPort or port.port
+    targetPort: #@ port.port
+  #@ if port.hostPort:
   type: NodePort
   #@ else:
   type: ClusterIP
+  #@ end
   #@ end
 #@ end
 #@ end
@@ -156,7 +165,7 @@ spec:
     spec:
       containers:
       - name: post-deploy-script
-        #@ if comp.skip_pull_image:
+        #@ if comp.skip_image_pull:
         imagePullPolicy: Never
         image: #@ "docker.io/library/{}:dev".format(comp.name)
         #@ else:
@@ -173,25 +182,4 @@ spec:
           #@ end
       restartPolicy: OnFailure
 #@ end
-#@ end
-#@ for ing in data.values.ingress:
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: #@ "ingress-for-{}".format(ing.host)
-spec:
-  rules:
-  - host: #@ ing.host
-    http:
-      paths:
-      #@ for path in ing.paths:
-      - path: #@ path.path
-        pathType: Prefix
-        backend:
-          service:
-            name: #@ path.service
-            port:
-              number: 80
-      #@ end
 #@ end

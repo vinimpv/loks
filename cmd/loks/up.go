@@ -23,16 +23,22 @@ var upCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("error loading config: %v", err)
 		}
-
-		err = cluster.CreateCluster(cfg.Name)
-		if err != nil {
-			log.Fatalf("error creating cluster: %v", err)
-		}
-
 		currentContextRootPath, err := config.GetCurrentContextRootPath()
 		if err != nil {
 			log.Fatalf("error getting current context root path: %v", err)
 		}
+
+		portsToExpose := []int{}
+		for _, component := range cfg.Components {
+			for _, deployment := range component.Deployments {
+				for _, port := range deployment.Ports {
+					if port.HostPort != 0 {
+
+		err = cluster.CreateCluster(cfg.Name, currentContextRootPath)
+		if err != nil {
+			log.Fatalf("error creating cluster: %v", err)
+		}
+
 		wg := sync.WaitGroup{}
 		for _, component := range cfg.Components {
 			wg.Add(1)
