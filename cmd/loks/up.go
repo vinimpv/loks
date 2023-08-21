@@ -14,30 +14,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func getPortsToExpose(cfg *config.Config) []int {
+	portsToExpose := []int{}
+	for _, component := range cfg.Components {
+		for _, deployment := range component.Deployments {
+			for _, port := range deployment.Ports {
+				if port.HostPort != 0 {
+					portsToExpose = append(portsToExpose, port.HostPort)
+				}
+			}
+		}
+	}
+	return portsToExpose
+}
+
 var upCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Bootstraps the cluster and deploys services",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := config.LoadUserConfig()
+		cfg, currentContextRootPath, err := config.LoadUserConfig()
 		if err != nil {
 			log.Fatalf("error loading config: %v", err)
 		}
-		currentContextRootPath, err := config.GetCurrentContextRootPath()
-		if err != nil {
-			log.Fatalf("error getting current context root path: %v", err)
-		}
 
-		portsToExpose := []int{}
-		for _, component := range cfg.Components {
-			for _, deployment := range component.Deployments {
-				for _, port := range deployment.Ports {
-					if port.HostPort != 0 {
-						portsToExpose = append(portsToExpose, port.HostPort)
-					}
-				}
-			}
-		}
+		portsToExpose := getPortsToExpose(cfg)
 
 		err = cluster.CreateCluster(cfg.Name, currentContextRootPath, portsToExpose)
 		if err != nil {

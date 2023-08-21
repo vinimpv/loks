@@ -18,7 +18,7 @@ components:
       - name: postgres
         ports:
           - port: 5432
-            hostPort: 5432
+            hostPort: 30432
         livenessProbe:
           exec:
             command:
@@ -38,7 +38,7 @@ components:
       - name: localstack
         ports:
           - port: 4566
-            hostPort: 4566
+            hostPort: 30566
     env:
       SERVICES: s3
       AWS_DEFAULT_REGION: us-east-1
@@ -60,6 +60,7 @@ components:
       - name: backend
         ports:
           - port: 8000
+            hostPort: 30800
         mount_path: /app
         livenessProbe:
           httpGet:
@@ -80,6 +81,7 @@ components:
       - name: frontend
         ports:
           - port: 80
+            hostPort: 30080
         mount_path: /app
     dependencies:
       - backend

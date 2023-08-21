@@ -14,7 +14,7 @@ var schema string
 //go:embed template.yaml
 var template string
 
-func Render(configPath string) (string, error) {
+func Render(configPath string, extraValues ...string) (string, error) {
 	// Open the config file and get its contents as a string
 	file, err := os.ReadFile(configPath)
 	if err != nil {
@@ -41,7 +41,7 @@ func Render(configPath string) (string, error) {
 	}
 	defer os.Remove(tempSchemaFilePath)
 
-	out, err := ytt(tempSchemaFilePath, tempTemplateFilePath, tempConfigFilePath)
+	out, err := ytt(tempSchemaFilePath, tempTemplateFilePath, tempConfigFilePath, extraValues...)
 	if err != nil {
 		return "", fmt.Errorf("failed to render: %w", err)
 	}
@@ -49,9 +49,13 @@ func Render(configPath string) (string, error) {
 
 }
 
-func ytt(schemaPath, templatePath, valuesPath string) (string, error) {
+func ytt(schemaPath, templatePath, valuesPath string, extraValues ...string) (string, error) {
 	// Assuming ytt is available as a command line tool
-	cmd := exec.Command("ytt", "-f", schemaPath, "-f", templatePath, "-f", valuesPath)
+	args := []string{"-f", schemaPath, "-f", templatePath, "-f", valuesPath}
+	for _, v := range extraValues {
+		args = append(args, "--data-value", v)
+	}
+	cmd := exec.Command("ytt", args...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

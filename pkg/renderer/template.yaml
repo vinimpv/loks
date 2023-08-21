@@ -1,13 +1,14 @@
 #@ load("@ytt:data", "data")
 #@ load("@ytt:struct", "struct")
 #@ for comp in data.values.components:
-#@ if/end comp.pre_deploy_script:
+#@ if comp.pre_deploy_script:
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: #@ "{}-pre-deploy-job".format(comp.name)
   annotations:
+    kapp.k14s.io/update-strategy: always-replace
     kapp.k14s.io/change-group: #@ "{}.pre-deploy".format(comp.name)
     #@ if comp.dependencies:
     #@ for i, d in enumerate(comp.dependencies):
@@ -23,11 +24,16 @@ spec:
     spec:
       containers:
       - name: pre-deploy-script
+        #@ if data.values.update_context and data.values.update_context.component == comp.name:
+        image: #@ data.values.update_context.image
+        imagePullPolicy: Never
+        #@ else:
         #@ if comp.skip_image_pull:
         imagePullPolicy: Never
         image: #@ "docker.io/library/{}:dev".format(comp.name)
         #@ else:
         image: #@ comp.image
+        #@ end
         #@ end
         command: #@ ["/bin/sh", "-c", comp.pre_deploy_script]
         #@ if comp.env:
@@ -39,6 +45,7 @@ spec:
           #@ end
           #@ end
       restartPolicy: OnFailure
+#@ end
 #@ for dep in comp.deployments:
 ---
 apiVersion: apps/v1
@@ -47,6 +54,7 @@ metadata:
   name: #@ dep.name
   annotations:
     kapp.k14s.io/change-group: #@ "{}.deployments".format(comp.name)
+    kapp.k14s.io/update-strategy: always-replace
     #@ if comp.pre_deploy_script:
     kapp.k14s.io/change-rule.pre-deploy: #@ "upsert after upserting {}.pre-deploy".format(comp.name, dep.name)
     #@ end
@@ -71,11 +79,16 @@ spec:
     spec:
       containers:
       - name: #@ dep.name
+        #@ if data.values.update_context and data.values.update_context.component == comp.name:
+        image: #@ data.values.update_context.image
+        imagePullPolicy: Never
+        #@ else:
         #@ if comp.image and not comp.skip_image_pull:
         image: #@ comp.image
         #@ else:
         image: #@ "docker.io/library/{}:dev".format(comp.name)
         imagePullPolicy: Never
+        #@ end
         #@ end
         #@ if dep.command:
         command: #@ dep.command
@@ -115,13 +128,14 @@ spec:
         hostPath:
           path: #@ "/workspace/{}".format(dep.name)
       #@ end
-#@ if/end dep.ports:
+#@ if dep.ports:
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: #@ dep.name
   annotations:
+    kapp.k14s.io/update-strategy: always-replace
     kapp.k14s.io/change-group: #@ "{}.deployments".format(comp.name)
     #@ if comp.pre_deploy_script:
     kapp.k14s.io/change-rule.pre-deploy: #@ "upsert after upserting {}.pre-deploy".format(comp.name)
@@ -141,8 +155,11 @@ spec:
   ports:
   #@ for port in dep.ports:
   - protocol: TCP
-    port: #@ port.hostPort or port.port
+    port: #@ port.port
     targetPort: #@ port.port
+    #@ if port.hostPort:
+    nodePort: #@ port.hostPort
+    #@ end
   #@ if port.hostPort:
   type: NodePort
   #@ else:
@@ -152,6 +169,7 @@ spec:
   #@ end
 #@ end
 #@ end
+#@ end
 #@ if comp.post_deploy_script:
 ---
 apiVersion: batch/v1
@@ -159,6 +177,7 @@ kind: Job
 metadata:
   name: #@ "{}-post-deploy-job".format(comp.name)
   annotations:
+    kapp.k14s.io/update-strategy: always-replace
     kapp.k14s.io/change-group: #@ "{}.post-deploy".format(comp.name)
     kapp.k14s.io/change-rule.after-deployments: #@ "upsert after upserting {}.deployments".format(comp.name)
 spec:
@@ -166,11 +185,16 @@ spec:
     spec:
       containers:
       - name: post-deploy-script
+        #@ if data.values.update_context and data.values.update_context.component == comp.name:
+        image: #@ data.values.update_context.image
+        imagePullPolicy: Never
+        #@ else:
         #@ if comp.skip_image_pull:
         imagePullPolicy: Never
         image: #@ "docker.io/library/{}:dev".format(comp.name)
         #@ else:
         image: #@ comp.image
+        #@ end
         #@ end
         command: #@ ["/bin/sh", "-c", comp.post_deploy_script]
         #@ if comp.env:

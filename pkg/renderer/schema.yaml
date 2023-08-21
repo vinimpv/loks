@@ -2,6 +2,9 @@
 ---
 #@schema/nullable
 name: local
+update_context:
+  image: string
+  component: string
 components:
   - name: string
 
@@ -71,3 +74,8 @@ components:
 
           #@schema/nullable
           periodSeconds: 123
+
+#@schema/nullable
+extra:
+  #@schema/nullable
+  image: string

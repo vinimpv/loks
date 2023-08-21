@@ -12,7 +12,7 @@ var downCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Destroy the exiting cluster specified in the config file",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := config.LoadUserConfig()
+		cfg, _, err := config.LoadUserConfig()
 		if err != nil {
 			log.Fatalf("error loading config: %v", err)
 		}

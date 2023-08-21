@@ -34,6 +34,15 @@ type Config struct {
 	Components []Component `mapstructure:"components"`
 }
 
+func (c *Config) GetComponent(name string) (*Component, error) {
+	for _, component := range c.Components {
+		if component.Name == name {
+			return &component, nil
+		}
+	}
+	return nil, fmt.Errorf("component %s not found", name)
+}
+
 func GetCurrentContextRootPath() (string, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -59,12 +68,16 @@ func GetCurrentContextRootPath() (string, error) {
 // It returns the config if the config file is found.
 // It returns an error if the config file is found but it cannot be parsed.
 // The user must be in the root projects directory or inside one of the projects root folders.
-func LoadUserConfig() (*Config, error) {
+func LoadUserConfig() (*Config, string, error) {
 	configPath, err := GetCurrentContextRootPath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting current context root path: %v", err)
+		return nil, "", fmt.Errorf("error getting current context root path: %v", err)
 	}
-	return LoadConfigFromPath(filepath.Join(configPath, "loks.yaml"))
+	cfg, err := LoadConfigFromPath(filepath.Join(configPath, "loks.yaml"))
+	if err != nil {
+		return nil, "", fmt.Errorf("error loading config: %v", err)
+	}
+	return cfg, configPath, nil
 
 }
 
