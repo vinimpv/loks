@@ -10,7 +10,7 @@ import (
 
 type Port struct {
 	Port     int `mapstructure:"port"`
-	HostPort int `mapstructure:"hostPort"`
+	HostPort int `mapstructure:"hostPort,omitempty"`
 }
 type Deployment struct {
 	Name         string            `mapstructure:"name"`

@@ -80,7 +80,7 @@ spec:
         #@ if dep.command:
         command: #@ dep.command
         #@ end
-        #@ if dep.port:
+        #@ if dep.ports:
         ports:
         #@ for port in dep.ports:
         - containerPort: #@ port.port
@@ -115,7 +115,7 @@ spec:
         hostPath:
           path: #@ "/workspace/{}".format(dep.name)
       #@ end
-#@ if/end dep.port:
+#@ if/end dep.ports:
 ---
 apiVersion: v1
 kind: Service
@@ -147,6 +147,7 @@ spec:
   type: NodePort
   #@ else:
   type: ClusterIP
+  #@ end
   #@ end
   #@ end
 #@ end

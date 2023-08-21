@@ -33,8 +33,13 @@ var upCmd = &cobra.Command{
 			for _, deployment := range component.Deployments {
 				for _, port := range deployment.Ports {
 					if port.HostPort != 0 {
+						portsToExpose = append(portsToExpose, port.HostPort)
+					}
+				}
+			}
+		}
 
-		err = cluster.CreateCluster(cfg.Name, currentContextRootPath)
+		err = cluster.CreateCluster(cfg.Name, currentContextRootPath, portsToExpose)
 		if err != nil {
 			log.Fatalf("error creating cluster: %v", err)
 		}

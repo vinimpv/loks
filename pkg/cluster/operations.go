@@ -3,12 +3,14 @@ package cluster
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
 	"os/exec"
+	"text/template"
+
+	_ "embed"
 )
 
-const KIND_CREATION_CMD = `cat <<EOF | kind create cluster --name {{.Name}} --config=-
+var KIND_CONFIG_TEMPLATE = `
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -23,35 +25,43 @@ nodes:
         kubeletExtraArgs:
           node-labels: "ingress-ready=true"
   extraPortMappings:
-  {{- range $i, $p := .Ports }}
-  - containerPort: {{$p}}
-    hostPort: {{$p}}
-	protocol: TCP
-  {{- end }
-EOF
+  {{range .Ports}}
+  - containerPort: {{.}}
+    hostPort: {{.}}
+    protocol: TCP
+  {{end}}
 `
 
 type CommandTemplateData struct {
-	Name            string
 	HostPathToMount string
 	Ports           []int
 }
 
-func getCreateClusterCmd(name, hostPathToMount string, ports []int) (string, error) {
-	template, err := template.New("kind").Parse(KIND_CREATION_CMD)
+func renderKindConfig(name, hostPathToMount string, ports []int) (string, error) {
+	tmpl, err := template.New("kindConfig").Parse(KIND_CONFIG_TEMPLATE)
 	if err != nil {
 		return "", fmt.Errorf("error parsing kind template: %w", err)
 	}
+
 	var buf bytes.Buffer
-	err = template.Execute(&buf, CommandTemplateData{
-		Name:            name,
+	err = tmpl.Execute(&buf, CommandTemplateData{
 		HostPathToMount: hostPathToMount,
 		Ports:           ports,
 	})
+
 	if err != nil {
 		return "", fmt.Errorf("error executing kind template: %w", err)
 	}
+
 	return buf.String(), nil
+}
+
+func getCreateClusterCmd(name, hostPathToMount string, ports []int) (string, error) {
+	kindConfig, err := renderKindConfig(name, hostPathToMount, ports)
+	if err != nil {
+		return "", fmt.Errorf("failed to render kind config: %w", err)
+	}
+	return fmt.Sprintf("kind create cluster --name %s --config - <<EOF\n%s\nEOF", name, kindConfig), nil
 }
 
 func CreateCluster(name, hostPathToMount string, ports []int) error {
