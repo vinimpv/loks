@@ -16,28 +16,22 @@ Create a `loks.yaml` file in the root folder of your projects (assuming you want
 
 ```yaml
 name: loks
-# Components are the different services that will be running in the cluster
-# each component can have multiple deployments, each deployment will be
-# running in a different pod and can have different configurations
+# Define the components, representing services running in the cluster.
+# A component can have multiple deployments, each in its own pod with specific configurations.
 components:
   - name: postgres
-    # image is the docker image that will be used for the deployment of the one or more pods
-    image: postgres:latest
-    # you can specify env variables at the component level, these will be available to all deployments
-    # these can be overriden at the deployment level
+    image: postgres:latest # Docker image for deployment.
+    # Environment variables at the component level, available to all deployments. They can be overridden at the deployment level.
     env:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     deployments:
       - name: postgres
-        # ports is a list of ports that will be exposed by the deployment
         ports:
           - port: 5432
-            # hostPort is the port that will be exposed to the host machine, these have to be in the range of 30000-32767
-            hostPort: 30432
-        # livinessProbe is a kubernetes probe that will be used to check if the pod is ready
-        # in this case we are using a exec probe that will run the command pg_isready to check if the database is ready
+            hostPort: 30432 # Exposed to the host machine, must be in the range of 30000-32767.
+        # Kubernetes liveness probe to check if the pod is ready. Using exec probe to run 'pg_isready' to check database readiness.
         livenessProbe:
           exec:
             command:
@@ -51,8 +45,7 @@ components:
 
   - name: localstack
     image: localstack/localstack:latest
-    # post_deploy_script is a script that will be run after the deployment of the component
-    # this can be used to run commands like creating a bucket in s3 (in this case we are using localstack)
+    # Script run after deployment, e.g., creating an S3 bucket in localstack.
     post_deploy_script: |
       aws --endpoint-url=${AWS_ENDPOINT_URL} s3 mb s3://${AWS_S3_BUCKET_NAME}
     deployments:
@@ -69,18 +62,11 @@ components:
       AWS_ENDPOINT_URL: http://localstack.default.svc.cluster.local:4566
 
   - name: backend
-    # skip_image_pull is used to skip the image pull, this is useful when you are developing the image locally
-    # and you don't want to pull the production image
-    # another option here would be to specify the production image like in the other components, then you can
-    # skip building the development image
-    skip_image_pull: true
-    # build_dev is a script that will be run to build the development image
-    # its necessary to build the development image and for the `loks update` command to be able to build new images
-    # important: the script should build the image with the tag `:dev`
+    skip_image_pull: true # Skip image pull when developing locally.
+    # Script to build the development image (tagged ':dev'). Required for 'loks update'.
     build_dev: |
       docker build -t backend:dev .
-    # pre_deploy_script is a script that will be run before the deployment of the component
-    # this can be used to run commands like migrations
+    # Script run before deployment, e.g., database migrations.
     pre_deploy_script: |
       sleep 5
       echo "Migration completed"
@@ -98,8 +84,7 @@ components:
             port: 8000
           initialDelaySeconds: 3
           periodSeconds: 3
-    # dependencies is a list of components that this component depends on
-    # this will make sure that the component is deployed after the dependencies are deployed
+    # List of dependent components. Ensures deployment after dependencies.
     dependencies:
       - redis
       - postgres
@@ -114,7 +99,7 @@ components:
         ports:
           - port: 80
             hostPort: 30080
-        # mount_path is a path on the docker image that we will mount the project folder to
+        # Path on the Docker image where the project folder will be mounted.
         mount_path: /app
     dependencies:
       - backend
