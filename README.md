@@ -6,7 +6,23 @@ Loks is an attempt to simplify the process of bootstrapping a local Kubernetes e
 
 ## How It Works
 
-Under the hood, loks uses [kind] to create a Kubernetes cluster, share volumes with the host machine, and expose ports to the host machine. It employs `ytt` for the YAML templating and [kapp] for the deployment.
+Under the hood, loks uses [kind](https://kind.sigs.k8s.io/) to create a Kubernetes cluster and [ytt](https://carvel.dev/ytt/) to generate the Kubernetes manifests. It also uses [kapp](https://carvel.dev/kapp/) to deploy the components to the cluster.
+
+Loks uses a `loks.yaml` file to define the components and their configurations. It also supports running scripts before and after deployment, which can be used for tasks like database migrations, creating S3 buckets in localstack, etc.
+
+The `loks.yaml` file also supports defining dependent components, which ensures that the dependent components are deployed before the component that depends on them.
+
+It's also possible to mount the project folder to the component's pod, which allows for live reloading of code changes (see the mount_path property on the backend and frontend components in the example below).
+
+Deployments can specify hostPorts, which will expose the service to the host machine. This allows for accessing the service from the host's network, e.g., http://localhost:30080 for the frontend service in the example below. One caveat is that the hostPort must be in the range of 30000-32767.
+
+You can set the order of the components in the `loks.yaml` file, which will ensure that the components are deployed in the specified order. This is useful when you have dependent components, e.g., a backend service that depends on a database.
+
+Loks also supports building development images for components, which can be used for live reloading of code changes. Basically there are two modes of operation:
+
+- skip_image_pull: true: This will skip pulling the image from the registry and use the `build_dev` script to build the development image. Its important to note that the development image tag should be in the format `<component_name>:dev`, e.g., `backend:dev`.
+
+- image: <image>: This will pull the image from the registry and use it for deployment, this is useful when you don't want to build the image locally for the development environment.
 
 ## How to Use It
 
