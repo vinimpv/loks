@@ -27,19 +27,36 @@ var updateCommand = &cobra.Command{
 		if err != nil {
 			log.Fatalf("error getting component: %v", err)
 		}
-		if component.BuildDev == "" {
-			log.Fatalf("no build_dev command specified for component %s, to pull new images run `loks pull`", componentName)
-		}
-		err = docker.BuildDev(filepath.Join(currentContextRootPath, component.Name), component.BuildDev)
-		if err != nil {
-			log.Fatalf("error building dev image: %v", err)
-		}
+
 		devTag := fmt.Sprintf("%s:dev", component.Name)
 		randomTag := fmt.Sprintf("%s:%s", component.Name, uuid.New().String())
 
-		err = docker.Tag(devTag, randomTag)
-		if err != nil {
-			log.Fatalf("error tagging dev image: %v", err)
+		if component.BuildDev == "" {
+			// pull production image
+			err = docker.PullImage(component.Image)
+			if err != nil {
+				log.Fatalf("error pulling image: %v", err)
+			}
+			err = docker.Tag(component.Image, randomTag)
+			if err != nil {
+				log.Fatalf("error tagging image: %v", err)
+			}
+			err = cluster.LoadImage(cfg.Name, component.Image)
+			if err != nil {
+				log.Fatalf("error pushing image: %v", err)
+			}
+
+		} else {
+			// build dev image
+			err = docker.BuildDev(filepath.Join(currentContextRootPath, component.Name), component.BuildDev)
+			if err != nil {
+				log.Fatalf("error building dev image: %v", err)
+			}
+			err = docker.Tag(devTag, randomTag)
+			if err != nil {
+				log.Fatalf("error tagging dev image: %v", err)
+			}
+
 		}
 
 		err = cluster.LoadImage(cfg.Name, randomTag)
