@@ -76,6 +76,7 @@ components:
     skip_image_pull: true
     # build_dev is a script that will be run to build the development image
     # its necessary to build the development image and for the `loks update` command to be able to build new images
+    # important: the script should build the image with the tag `:dev`
     build_dev: |
       docker build -t backend:dev .
     # pre_deploy_script is a script that will be run before the deployment of the component
@@ -118,6 +119,31 @@ components:
     dependencies:
       - backend
 ```
+
+You can find an example project in the [`examples` folder](https://github.com/vinimpv/loks/tree/main/example).
+
+## Installation
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started/)
+- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
+- [ytt](https://carvel.dev/ytt/)
+- [kapp](https://carvel.dev/kapp/)
+
+### Build from Source
+
+```bash
+git clone git@github.com:vinimpv/loks.git
+cd loks
+make build
+ln -s $(pwd)/build/loks /usr/local/bin/loks
+```
+
+### From Releases
+
+Download the latest release from [here](https://github.com/vinimpv/loks/releases)
+
 ### Commands
 
 #### `loks up`
@@ -131,29 +157,3 @@ This command will build the development images for the components that have the 
 #### `loks down`
 
 This command will delete the cluster and all the components.
-
-## Installation
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
-- [ytt](https://get-ytt.io/)
-- [kapp](https://get-kapp.io/)
-
-### Build from Source
-
-```bash
-git clone
-cd loks
-go make build
-ln -s $(pwd)/build/loks /usr/local/bin/loks
-```
-
-### From Releases
-
-Download the latest release from [here]()
-
-## Examples
-
-You can find an example project in the `examples` folder.
